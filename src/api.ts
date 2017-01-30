@@ -2,100 +2,100 @@ import * as Promise from 'bluebird';
 import {Signal} from "./Signal";
 export const CLOSED = {};
 
-export interface Source<T> {
-    take(): Promise<T> | {};
-    takeSync(): T | {};
+export interface Source {
+    take(): Promise<any>;
+    takeSync(): any;
     canTakeSync(count: number): boolean;
 }
 
-export interface Destination<T> {
-    put(item: T): Promise<null>;
-    putSync<T>(item: T, allowOverflow?: boolean): void;
+export interface Destination {
+    put(item: any): Promise<null>;
+    putSync<T>(item: any, allowOverflow?: boolean): void;
     canPutSync(count: number): boolean;
 }
 
-export interface BatchSource<T> extends Source<T> {
-    takeMany(count: number): Promise<(T | {})[]>;
-    takeManySync(count: number): (T | {})[];
+export interface BatchSource extends Source {
+    takeMany(count: number): Promise<any[]>;
+    takeManySync(count: number): any[];
 }
 
-export interface BatchDestination<T> extends Destination<T> {
-    putMany(items: T[]): Promise<null>;
-    putManySync(items: T[], allowOverflow?: boolean): void;
+export interface BatchDestination extends Destination {
+    putMany(items: any[]): Promise<null>;
+    putManySync(items: any[], allowOverflow?: boolean): void;
 }
 
 export enum OperationType {
     TAKE, TAKE_MANY, PUT, PUT_MANY
 }
 
-export interface TakeOperation<T> {
+export interface TakeOperation {
     op: OperationType.TAKE,
-    ch: Source<T> & Selectable<T>
+    ch: Source & Selectable
 }
 
-export interface TakeManyOperation<T> {
+export interface TakeManyOperation {
     op: OperationType.TAKE_MANY,
-    ch: BatchSource<T> & Selectable<T>,
+    ch: BatchSource & Selectable,
     count: number
 }
 
-export interface PutOperation<T> {
+export interface PutOperation {
     op: OperationType.PUT,
-    ch: Destination<T> & Selectable<T>,
-    value: T
+    ch: Destination & Selectable,
+    value: any
 }
 
-export interface PutManyOperation<T> {
+export interface PutManyOperation {
     op: OperationType.PUT_MANY,
-    ch: BatchDestination<T> & Selectable<T>,
-    values: T[]
+    ch: BatchDestination & Selectable,
+    values: any[]
 }
 
-export type Operation<T> = TakeOperation<T> | TakeManyOperation<T> | PutOperation<T> | PutManyOperation<T>;
+export type Operation = TakeOperation | TakeManyOperation | PutOperation | PutManyOperation;
 
-export type SelectCallback<T> = (err: any, op: Operation<T>) => void;
+export type SelectCallback = (err: any, op: Operation) => void;
 export type PutCallback = (arg: null) => void;
-export type TakeCallback<T> = (values: (T | {})[]) => void;
+export type TakeCallback = (values: any[]) => void;
 
-export interface Selectable<T> extends Source<T> {
-    _select(op: Operation<T>, cb: SelectCallback<T>): void;
-    _unselect(op: Operation<T>): void;
+export interface Selectable extends Source {
+    _select(op: Operation, cb: SelectCallback): void;
+    _unselect(op: Operation): void;
     _canSelectPutSync(count: number): boolean;
 }
 
-export interface SelectTakeResult<T> {
-    ch: Source<T>,
-    value: T
+export interface SelectTakeResult {
+    ch: Source,
+    value: any
 }
 
-export interface SelectTakeManyResult<T> {
-    ch: BatchSource<T>,
-    values: (T | {})[]
+export interface SelectTakeManyResult {
+    ch: BatchSource,
+    values: any[]
 }
 
-export interface SelectPutResult<T> {
-    ch: Destination<T>
+export interface SelectPutResult {
+    ch: Destination
 }
 
-export interface SelectPutManyResult<T> {
-    ch: BatchDestination<T>
+export interface SelectPutManyResult {
+    ch: BatchDestination
 }
 
-export interface SuccessfulProcessResult<T> {
-    succeeded: T
+export interface SuccessfulProcessResult {
+    succeeded: any
 }
 
 export interface FailedProcessResult {
     failed: any
 }
 
-export type ProcessResult<T> = SuccessfulProcessResult<T> | FailedProcessResult;
+export type ProcessResult = SuccessfulProcessResult | FailedProcessResult;
 
-export interface Process<T> {
-    succeeded: Signal<T>,
-    failed: Signal<any>,
-    completed: Signal<ProcessResult<T>>,
-    abort: Signal<string>
+export interface Process {
+    succeeded: Signal,
+    failed: Signal,
+    completed: Signal,
+    abort: Signal
 }
 
 export class Abort  {
@@ -104,5 +104,5 @@ export class Abort  {
 
 
 
-export type SelectResult<T> = SelectTakeResult<T> | SelectTakeManyResult<T> | SelectPutResult<T> | SelectPutManyResult<T>;
+export type SelectResult = SelectTakeResult | SelectTakeManyResult | SelectPutResult | SelectPutManyResult;
 

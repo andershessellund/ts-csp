@@ -9,8 +9,8 @@ import {Signal} from "../src/Signal";
 describe('selectOrAbort', () => {
    it('If abort is not raised, the select will work as usual', () => {
       return Promise.coroutine(function*() {
-          const ch = new Channel<string>(0);
-          const process = go(function*(abortSignal: Signal<string>) {
+          const ch = new Channel(0);
+          const process = go(function*(abortSignal: Signal) {
               const selectResult = yield selectOrAbort(abortSignal, [
                   { ch, op: OperationType.TAKE}
               ]);
@@ -27,8 +27,8 @@ describe('selectOrAbort', () => {
 
     it('If abortSignal is raised, Abort will be thrown wil appropriate reason', () => {
         return Promise.coroutine(function*() {
-            const ch = new Channel<string>(0);
-            const process = go(function*(abortSignal: Signal<string>) {
+            const ch = new Channel(0);
+            const process = go(function*(abortSignal: Signal) {
                 const selectResult = yield selectOrAbort(abortSignal, [
                     { ch, op: OperationType.TAKE}
                 ]);

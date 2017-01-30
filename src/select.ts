@@ -6,7 +6,7 @@ import {
     SelectResult
 } from './api';
 
-export const select = function (selectSpec: Operation<any>[]): Promise<SelectResult<any>> {
+export const select = function (selectSpec: Operation[]): Promise<SelectResult> {
     if(!Array.isArray(selectSpec) || selectSpec.length === 0) {
         throw new Error('must specify at least one spec');
     }
@@ -63,8 +63,8 @@ export const select = function (selectSpec: Operation<any>[]): Promise<SelectRes
             });
         }
     }
-    return new Promise<SelectResult<any>>((resolve, reject) => {
-        const cb = (err: any, selectedSpec: Operation<any>) => {
+    return new Promise<SelectResult>((resolve, reject) => {
+        const cb = (err: any, selectedSpec: Operation) => {
             for(const spec of selectSpec) {
                 spec.ch._unselect(spec);
             }

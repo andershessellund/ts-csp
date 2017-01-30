@@ -7,16 +7,16 @@ import {
     TakeManyOperation, Selectable, Source, Operation, OperationType
 } from "./api";
 
-export class Signal<T> implements Selectable<T>, Source<T> {
-    private _selectTakes: SelectCallback<T>[] = [];
-    private _selectTakeOps: (TakeOperation<T> | TakeManyOperation<T>)[] = [];
-    private _connected: Signal<T>[] = [];
-    private _resolve: (value: T) => void;
+export class Signal implements Selectable, Source {
+    private _selectTakes: SelectCallback[] = [];
+    private _selectTakeOps: (TakeOperation | TakeManyOperation)[] = [];
+    private _connected: Signal[] = [];
+    private _resolve: (value: any) => void;
     private _reject: (error: any) => void;
-    private _promise: Promise<T>;
-    private _value: (T | undefined) = undefined;
+    private _promise: Promise<any>;
+    private _value: any = undefined;
     constructor() {
-        const { resolve, reject, promise } = makePromise<T>();
+        const { resolve, reject, promise } = makePromise();
         this._resolve = resolve;
         this._reject = reject;
         this._promise = promise;
@@ -40,15 +40,15 @@ export class Signal<T> implements Selectable<T>, Source<T> {
         return false;
     }
 
-    raise(value: T) {
+    raise(value: any) {
         if(typeof value === 'undefined') {
             throw new Error('Cannot raise a signal with an undefined value');
         }
         this._value = value;
         this._resolve(value);
         while (this._selectTakes.length > 0) {
-            const cb = <SelectCallback<T>>this._selectTakes.shift();
-            const op = <Operation<T>>this._selectTakeOps.shift();
+            const cb = <SelectCallback>this._selectTakes.shift();
+            const op = <Operation>this._selectTakeOps.shift();
             cb(undefined, op);
         }
         for (let signal of this._connected) {
@@ -57,25 +57,25 @@ export class Signal<T> implements Selectable<T>, Source<T> {
         this._connected = [];
     }
 
-    takeSync(): T {
+    takeSync(): any {
         if (!this.isRaised()) {
             throw new Error('Cannot take immediate from un-raised signal');
         }
-        return <T>this._value;
+        return this._value;
     }
 
-    value(): T {
+    value(): any {
         if (!this.isRaised()) {
             throw new Error('Cannot get value from non-raised signal');
         }
-        return <T>this._value;
+        return this._value;
     }
 
     take() {
         return this._promise;
     }
 
-    connect(signal: Signal<T>) {
+    connect(signal: Signal) {
         if (this.isRaised()) {
             signal.raise(this.takeSync());
         }
@@ -84,7 +84,7 @@ export class Signal<T> implements Selectable<T>, Source<T> {
         }
     }
 
-    _select(op: TakeOperation<T>, cb: SelectCallback<T>): void {
+    _select(op: TakeOperation, cb: SelectCallback): void {
         if(op.op === OperationType.TAKE) {
             if(this.isRaised()) {
                 throw new Error('Cannot select for take on raised signal');
@@ -97,7 +97,7 @@ export class Signal<T> implements Selectable<T>, Source<T> {
         }
     }
 
-    _unselect(op: TakeOperation<T>): void {
+    _unselect(op: TakeOperation): void {
         const index = this._selectTakeOps.indexOf(op);
         this._selectTakes.splice(index, 1);
         this._selectTakeOps.splice(index, 1);

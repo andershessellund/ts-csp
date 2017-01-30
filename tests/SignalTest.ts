@@ -5,40 +5,40 @@ import {OperationType, SelectCallback, TakeOperation, PutOperation} from "../src
 
 describe('Signal', () => {
     it('Is initially not raised', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         assert(!s.isRaised());
     });
 
     it('Throws when takeSync from non-raised signal', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         assert.throws(() => s.takeSync());
     });
 
     it('Throws when retrieving value from non-raised signal', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         assert.throws(() => s.value());
     });
 
     it('Throws when raising with a value of undefined', () => {
-        const s = new Signal<any>();
-        assert.throws(() => s.raise(<any>undefined));
+        const s = new Signal();
+        assert.throws(() => s.raise(undefined));
     });
 
     it('A signal can be raised and the value retrieved', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         s.raise('foo');
         assert.strictEqual(s.value(), 'foo');
     });
 
     it('A signal can be raised with a value of null', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         s.raise(null);
         assert.strictEqual(s.value(), null);
         assert(s.isRaised());
     });
 
     it('When a signal is raised with a value, all takes will be resolved with that value', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         const p1 = s.take();
         const p2 = s.take();
         assert.isFalse(p1.isFulfilled());
@@ -50,7 +50,7 @@ describe('Signal', () => {
     });
 
     it('A take from a raised signal is resolved immediately', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         s.raise('foo');
         const p = s.take();
         assert(p.isFulfilled());
@@ -58,20 +58,20 @@ describe('Signal', () => {
     });
 
     it('canTakeSync(1) returns whether a signal is raised', () => {
-        const s = new Signal<any>();
+        const s = new Signal();
         assert.isFalse(s.canTakeSync(1));
         s.raise('foo');
         assert.isTrue(s.canTakeSync(1));
     });
 
     it('Select on signal obeys expected behavior', () => {
-        const s = new Signal<string>();
-        const spec: TakeOperation<string> = {
+        const s = new Signal();
+        const spec: TakeOperation = {
             ch: s,
             op: OperationType.TAKE,
         };
         let callbackCalled = false;
-        const cb: SelectCallback<string> = (err, _spec) => {
+        const cb: SelectCallback = (err, _spec) => {
             callbackCalled = true;
             assert.isUndefined(err);
             assert.strictEqual(spec, _spec);
@@ -83,28 +83,28 @@ describe('Signal', () => {
     });
 
     it('A signal is never closed', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         assert.isFalse(s.isClosed());
         s.raise('foo');
         assert.isFalse(s.isClosed());
     });
 
     it('I can only take 1 value from a signal', () => {
-       const s = new Signal<string>();
+       const s = new Signal();
        s.raise('foo');
        assert.isFalse(s.canTakeSync(2));
     });
 
     it('I can synchronously take a value from a raised signal', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         s.raise('foo');
         assert.strictEqual(s.takeSync(), 'foo');
     });
 
     it('Throws if i try to select on a raised signal', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         s.raise('foo');
-        const op: TakeOperation<string> = {
+        const op: TakeOperation = {
             ch: s,
             op: OperationType.TAKE
         };
@@ -113,7 +113,7 @@ describe('Signal', () => {
     });
 
     it('Throws if i try to select on a signal with a different operation than TAKE', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         s.raise('foo');
         const op = {
             ch: s,
@@ -121,12 +121,12 @@ describe('Signal', () => {
             value: 'foo'
         };
         const cb = () => null;
-        assert.throws(() => s._select(<TakeOperation<string>>op, cb));
+        assert.throws(() => s._select(<TakeOperation>op, cb));
     });
 
     it('_unselect removes a select', () => {
-        const s = new Signal<string>();
-        const spec: TakeOperation<string> = {
+        const s = new Signal();
+        const spec: TakeOperation = {
             ch: s,
             op: OperationType.TAKE
         };
@@ -139,14 +139,14 @@ describe('Signal', () => {
     });
 
     it('canSelectPutSync throws', () => {
-        const s = new Signal<string>();
+        const s = new Signal();
         assert.throws(() => s._canSelectPutSync(1));
     });
 
     it('When raising a signal, all connected signals are raised too', () => {
-        const s = new Signal<string>();
-        const s1 = new Signal<string>();
-        const s2 = new Signal<string>();
+        const s = new Signal();
+        const s1 = new Signal();
+        const s2 = new Signal();
         s.connect(s1);
         s.connect(s2);
         s.raise('foo');
@@ -156,8 +156,8 @@ describe('Signal', () => {
     });
 
     it('Connecting an already raised signal raises the connected signal immediately', () => {
-        const s = new Signal<string>();
-        const s1 = new Signal<string>();
+        const s = new Signal();
+        const s1 = new Signal();
         s.raise('foo');
         s.connect(s1);
         assert(s1.isRaised());

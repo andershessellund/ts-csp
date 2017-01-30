@@ -21,27 +21,28 @@ import {
 import {
     makePromise
 } from './util';
+import FifoQueue from "./FifoQueue";
 
-export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T>, Selectable<T> {
+export class Channel implements BatchSource, BatchDestination, Source, Selectable {
 
     constructor(private _bufferSize: number = 0) {}
 
-    private _values: T[] = [];
+    private _values = new FifoQueue<any>();
 
     private _puts: (PutCallback | null)[] = [];
     private _putCounts: number[] = [];
     private _putCountSum: number = 0;
 
-    private _takes: TakeCallback<T>[] = [];
+    private _takes: TakeCallback[] = [];
     private _takeCounts : number[] = [];
     private _takeCountSum: number = 0;
 
-    private _selectTakes: SelectCallback<T>[] = [];
-    private _selectTakeOps: (TakeOperation<T> | TakeManyOperation<T>)[] = [];
+    private _selectTakes: SelectCallback[] = [];
+    private _selectTakeOps: (TakeOperation | TakeManyOperation)[] = [];
     private _selectTakeCountSum: number = 0;
 
-    private _selectPuts: SelectCallback<T>[] = [];
-    private _selectPutOps: (PutOperation<T> | PutManyOperation<T>)[] = [];
+    private _selectPuts: SelectCallback[] = [];
+    private _selectPutOps: (PutOperation | PutManyOperation)[] = [];
     private _selectPutCountSum: number = 0;
 
     private _bufferRemaining: number = this._bufferSize;
@@ -80,14 +81,14 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
             return false;
         }
         const count = this._takeCounts[0];
-        return count <= this._values.length || this._closed;
+        return count <= this._values.length() || this._closed;
     }
 
-    _doTake(desiredCount: number): (T | {})[] {
-        const takenCount = Math.min(this._values.length, desiredCount);
+    _doTake(desiredCount: number): any[] {
+        const takenCount = Math.min(this._values.length(), desiredCount);
         assert(desiredCount === takenCount || this._closed);
         this._bufferRemaining += takenCount;
-        const values : (T | {})[] = this._values.splice(0, takenCount);
+        const values : any[] = this._values.popMany(takenCount);
         if (desiredCount !== takenCount) {
             assert(this._closed);
             values.push(CLOSED);
@@ -96,7 +97,7 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
     }
 
     _applyTake(): void {
-        const resolver = <TakeCallback<T>>this._takes.shift();
+        const resolver = <TakeCallback>this._takes.shift();
         const desiredCount = <number>this._takeCounts.shift();
         this._takeCountSum -= desiredCount;
         const values = this._doTake(desiredCount);
@@ -201,57 +202,55 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
         return this._closed;
     }
 
-    _putMany(values: T[], resolver: PutCallback | null): void {
+    _putMany(values: any[], resolver: PutCallback | null): void {
         if (this._closed) {
             throw new Error('Cannot put to closed channel');
         }
-        for (let value of values) {
-            this._values.push(value);
-        }
+        this._values.unshiftMany(values);
         this._puts.push(resolver);
         this._putCounts.push(values.length);
         this._putCountSum += values.length;
         this._apply();
     }
 
-    putMany(values: T[]): Promise<null> {
+    putMany(values: any[]): Promise<null> {
         const { promise, resolve } = makePromise<null>();
         this._putMany(values, resolve);
         return promise;
     }
 
-    put(value: T): Promise<null> {
+    put(value: any): Promise<null> {
         const { promise, resolve } = makePromise<null>();
         this._putMany([value], resolve);
         return promise;
     }
 
-    putManySync(values: T[], allowOverflow: boolean = false): void {
+    putManySync(values: any[], allowOverflow: boolean = false): void {
         if (!allowOverflow && this._availableForSyncPut() < values.length) {
             throw new Error('Immediate put would cause overflow');
         }
         this._putMany(values, null);
     }
 
-    putSync(value: T, allowOverflow: boolean = false): void {
+    putSync(value: any, allowOverflow: boolean = false): void {
         this.putManySync([value], allowOverflow);
     }
 
-    _takeMany(count: number, resolver: TakeCallback<T>): void {
+    _takeMany(count: number, resolver: TakeCallback): void {
         this._takes.push(resolver);
         this._takeCounts.push(count);
         this._takeCountSum += count;
         this._apply();
     }
 
-    takeMany(count: number): Promise<(T|{})[]> {
-        const { promise, resolve} = makePromise<(T | {})[]>();
+    takeMany(count: number): Promise<any[]> {
+        const { promise, resolve} = makePromise<any[]>();
         this._takeMany(count, resolve);
         return promise;
     }
 
-    take(): Promise<T | {}> {
-        const { promise, resolve } = makePromise<T | {}>();
+    take(): Promise<any> {
+        const { promise, resolve } = makePromise<any>();
         this._takeMany(1, values => {
             resolve(values[0])
         });
@@ -267,11 +266,11 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
         }
     }
 
-    takeManySync(count: number): (T | {})[] {
+    takeManySync(count: number): any[] {
         if (!this.canTakeSync(count)) {
             throw new Error('Attempted to take immediate with no values available');
         }
-        while (this._takes.length > 0 || (this._values.length < count && !this._closed)) {
+        while (this._takes.length > 0 || (this._values.length() < count && !this._closed)) {
             this._forcePut();
         }
         const values = this._doTake(count);
@@ -308,7 +307,7 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
             }
         }
     }
-    _select(op: Operation<T>, cb: SelectCallback<T>): void {
+    _select(op: Operation, cb: SelectCallback): void {
         if(op.op === OperationType.TAKE || op.op === OperationType.TAKE_MANY) {
             const amount = op.op === OperationType.TAKE ? 1 : op.count;
             this._selectTakes.push(cb);
@@ -323,7 +322,7 @@ export class Channel<T> implements BatchSource<T>, BatchDestination<T>, Source<T
         }
     }
 
-    _unselect(op: Operation<T>): void {
+    _unselect(op: Operation): void {
         if(op.op === OperationType.TAKE || op.op === OperationType.TAKE_MANY) {
             const index = this._selectTakeOps.indexOf(op);
             const amount = op.op === OperationType.TAKE ? 1 : op.count;

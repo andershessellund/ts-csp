@@ -7,62 +7,62 @@ import {
 } from "../src/api";
 describe('select', () => {
     it('selectTake completes immediately when value is available', () => {
-        const ch = new Channel<string>(1);
+        const ch = new Channel(1);
         ch.putSync('foo');
-        const spec: TakeOperation<string> = {
+        const spec: TakeOperation = {
             ch,
             op: OperationType.TAKE
         };
         const p = select([spec]);
         assert(p.isFulfilled());
-        const selectResult: SelectTakeResult<string> = <any>p.value();
+        const selectResult: SelectTakeResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.strictEqual(selectResult.value, 'foo');
     });
     it('selectTakeMany completes immediately when values are available', () => {
-        const ch = new Channel<string>(2);
+        const ch = new Channel(2);
         ch.putSync('foo');
         ch.putSync('bar');
-        const spec: TakeManyOperation<string> = {
+        const spec: TakeManyOperation = {
             ch,
             op: OperationType.TAKE_MANY,
             count: 2
         };
         const p = select([spec]);
         assert(p.isFulfilled());
-        const selectResult: SelectTakeManyResult<string> = <any>p.value();
+        const selectResult: SelectTakeManyResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.deepEqual(selectResult.values, ['foo', 'bar']);
     });
     it('selectPut completes immediately when taker is available', () => {
-        const ch = new Channel<string>(0);
+        const ch = new Channel(0);
         ch.take();
-        const spec: PutOperation<string> = {
+        const spec: PutOperation = {
             ch,
             op: OperationType.PUT,
             value: 'foo'
         };
         const p = select([spec]);
         assert(p.isFulfilled());
-        const selectResult: SelectPutResult<string> = <any>p.value();
+        const selectResult: SelectPutResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
     });
     it('selectPutMany completes immediately when taker is available', () => {
-        const ch = new Channel<string>(0);
+        const ch = new Channel(0);
         ch.take();
-        const spec: PutManyOperation<string> = {
+        const spec: PutManyOperation = {
             ch,
             op: OperationType.PUT_MANY,
             values: ['foo', 'bar']
         };
         const p = select([spec]);
         assert(p.isFulfilled());
-        const selectResult: SelectPutManyResult<string> = <any>p.value();
+        const selectResult: SelectPutManyResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
     });
 
     it('will throw if op is not valid', () => {
-        const ch = new Channel<string>(0);
+        const ch = new Channel(0);
         const spec: any = {
             ch: ch,
             op: 10
@@ -71,8 +71,8 @@ describe('select', () => {
     });
 
     it('async select takes completes when value becomes available', () => {
-        const ch = new Channel<string>(1);
-        const spec: TakeOperation<string> = {
+        const ch = new Channel(1);
+        const spec: TakeOperation = {
             ch,
             op: OperationType.TAKE
         };
@@ -80,14 +80,14 @@ describe('select', () => {
         assert.isFalse(p.isFulfilled());
         ch.putSync('foo');
         assert(p.isFulfilled());
-        const selectResult: SelectTakeResult<string> = <any>p.value();
+        const selectResult: SelectTakeResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.strictEqual(selectResult.value, 'foo');
     });
 
     it('async select take many completes when values becomes available', () => {
-        const ch = new Channel<string>(1);
-        const spec: TakeManyOperation<string> = {
+        const ch = new Channel(1);
+        const spec: TakeManyOperation = {
             ch,
             op: OperationType.TAKE_MANY,
             count: 2
@@ -98,15 +98,15 @@ describe('select', () => {
         assert.isFalse(p.isFulfilled());
         ch.putSync('bar');
         assert(p.isFulfilled());
-        const selectResult: SelectTakeManyResult<string> = <any>p.value();
+        const selectResult: SelectTakeManyResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.deepEqual(selectResult.values, ['foo', 'bar']);
     });
 
     it('async select put completes when buffer space is available', () => {
-        const ch = new Channel<string>(1);
+        const ch = new Channel(1);
         ch.putSync('foo');
-        const spec: PutOperation<string> = {
+        const spec: PutOperation = {
             ch,
             op: OperationType.PUT,
             value: 'bar'
@@ -115,14 +115,14 @@ describe('select', () => {
         assert.isFalse(p.isFulfilled());
         assert.strictEqual(ch.takeSync(), 'foo');
         assert(p.isFulfilled());
-        const selectResult: SelectPutResult<string> = <any>p.value();
+        const selectResult: SelectPutResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.strictEqual(ch.takeSync(), 'bar');
     });
     it('async select put many completes when buffer space is available', () => {
-        const ch = new Channel<string>(2);
+        const ch = new Channel(2);
         ch.putSync('foo');
-        const spec: PutManyOperation<string> = {
+        const spec: PutManyOperation = {
             ch,
             op: OperationType.PUT_MANY,
             values: ['bar', 'foobar']
@@ -131,15 +131,15 @@ describe('select', () => {
         assert.isFalse(p.isFulfilled());
         assert.strictEqual(ch.takeSync(), 'foo');
         assert(p.isFulfilled());
-        const selectResult: SelectPutManyResult<string> = <any>p.value();
+        const selectResult: SelectPutManyResult = <any>p.value();
         assert.strictEqual(selectResult.ch, ch);
         assert.strictEqual(ch.takeSync(), 'bar');
         assert.strictEqual(ch.takeSync(), 'foobar');
     });
 
     it('put select is rejected when channel becomes closed', () => {
-        const ch = new Channel<string>(0);
-        const spec: PutOperation<string> = {
+        const ch = new Channel(0);
+        const spec: PutOperation = {
             ch,
             op: OperationType.PUT,
             value: 'bar'

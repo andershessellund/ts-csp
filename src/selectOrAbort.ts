@@ -3,9 +3,9 @@ import * as Promise from 'bluebird';
 import {Signal} from "./Signal";
 import {Operation, SelectResult, OperationType, Abort} from "./api";
 import {select} from "./select";
-export function selectOrAbort(abortSignal: Signal<string>, spec: Operation<any>[]): Promise<SelectResult<any>> {
+export function selectOrAbort(abortSignal: Signal, spec: Operation[]): Promise<SelectResult> {
     return Promise.coroutine(function*() {
-        const completeSpec: Operation<any>[] = [{
+        const completeSpec: Operation[] = [{
             ch: abortSignal,
             op: OperationType.TAKE
         }, ...spec];

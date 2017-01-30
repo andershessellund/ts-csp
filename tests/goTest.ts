@@ -10,7 +10,7 @@ import {Signal} from "../src/Signal";
 describe('go', () => {
     it('May run a successful process and return a value', () => {
         return Promise.coroutine(function*(): any {
-            const ch = new Channel<string>(0);
+            const ch = new Channel(0);
             const process = go(function*() {
                 return yield ch.take();
             });
@@ -26,8 +26,8 @@ describe('go', () => {
 
     it('A process may abort by returning Abort if the abort signal is raised', () => {
         return Promise.coroutine(function*(): any {
-            const ch = new Channel<string>(0);
-            const process = go(function*(abortSignal: Signal<string>) {
+            const ch = new Channel(0);
+            const process = go(function*(abortSignal: Signal) {
                 const {ch: selectedChannel} = yield select([
                     {ch, op: OperationType.TAKE},
                     {ch: abortSignal, op: OperationType.TAKE }
@@ -54,7 +54,7 @@ describe('go', () => {
 
     it('A process may abort by throwing Abort if the abort signal is raised', () => {
         return Promise.coroutine(function*(): any {
-            const process = go(function*(abortSignal: Signal<string>) {
+            const process = go(function*(abortSignal: Signal) {
                 const reason = yield abortSignal.take();
                 throw new Abort(reason);
             });

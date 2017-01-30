@@ -3,12 +3,12 @@ import * as Promise from 'bluebird';
 import {Process, ProcessResult, Abort} from "./api";
 import {Signal} from "./Signal";
 
-export const go = <T>(generator: Function): Process<T> => {
-    const completed = new Signal<ProcessResult<T>>();
-    const succeeded = new Signal<T>();
-    const failed = new Signal<any>();
-    const abortSignal = new Signal<string>();
-    const successHandler: (result: T | Abort) => void = result => {
+export const go = (generator: Function): Process => {
+    const completed = new Signal();
+    const succeeded = new Signal();
+    const failed = new Signal();
+    const abortSignal = new Signal();
+    const successHandler: (result: any) => void = result => {
         if(result instanceof Abort) {
             if(abortSignal.isRaised()) {
                 failed.raise(result);
@@ -32,7 +32,7 @@ export const go = <T>(generator: Function): Process<T> => {
         failed.raise(error);
         completed.raise({failed: error});
     };
-    const process: Process<T> = {
+    const process: Process = {
         succeeded, completed, failed, abort: abortSignal
     };
     Promise.coroutine(generator)(abortSignal).then(successHandler, errorHandler);
