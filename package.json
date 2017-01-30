@@ -1,0 +1,57 @@
+{
+  "name": "ts-csp",
+  "version": "0.0.1",
+  "description": "An ES6 implementation of CSP, with TypeScript defintions.",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha --compilers ts:ts-node/register tests/**/*Test.ts",
+    "coverage": "nyc --require ts-node/register ./node_modules/.bin/_mocha --compilers ts:ts-node/register tests/**/*Test.ts",
+    "build": "rm -rf lib && tsc -p . && rm -fr lib/tests && mv lib/src/** lib/ && rm -fr lib/src",
+    "prepublish": "npm run build"
+  },
+  "nyc": {
+    "include": [
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "node_modules/",
+      "dist/"
+    ],
+    "extension": [
+      ".ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ],
+    "reporter": [
+      "text-summary",
+      "html"
+    ],
+    "sourceMap": true,
+    "instrument": true
+  },
+  "typings": "lib/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "lib/"
+  ],
+  "author": "",
+  "devDependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.4",
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.15",
+    "mocha": "^3.2.0",
+    "mocha-clean": "^1.0.0",
+    "nyc": "^10.1.2",
+    "ts-node": "^2.0.0",
+    "typescript": "^2.1.5"
+  },
+  "dependencies": {
+    "@types/bluebird": "^3.0.37",
+    "@types/transducers-js": "0.0.2",
+    "bluebird": "^3.4.7",
+    "transducers-js": "^0.4.174"
+  }
+}
