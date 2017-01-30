@@ -4,6 +4,9 @@ import {
     OperationType, PutOperation, TakeOperation, Operation, CLOSED,
     TakeManyOperation, PutManyOperation
 } from "../src/api";
+import {map} from "transducers-js";
+import {filter} from "transducers-js";
+import {take} from "transducers-js";
 
 describe('Channel', () => {
     it('A channel is initially open', () => {
@@ -19,7 +22,7 @@ describe('Channel', () => {
         assert.strictEqual(ch.takeSync(), 'bar');
     });
 
-    it('I can putSync to a channel until the buffer is full. Then an error is thrown.', () => {
+    it('I can putSync to a channel, even if the buffer overflows', () => {
         const ch = new Channel(2);
         assert(ch.canPutSync(2));
         ch.putSync('foo');
@@ -27,17 +30,10 @@ describe('Channel', () => {
         assert(ch.canPutSync(1));
         ch.putSync('bar');
         assert.isFalse(ch.canPutSync(1));
-        assert.throws(() => ch.putSync('foobar'));
+        ch.putSync('foobar');
+        ch.takeSync();
         ch.takeSync();
         assert.isTrue(ch.canPutSync(1));
-    });
-
-    it('I can putSync to a channel with a full buffer if I allow overflow', () => {
-        const ch = new Channel(0);
-        assert.isFalse(ch.canPutSync(1));
-        ch.putSync('foo', true);
-        assert.strictEqual(ch.takeSync(), 'foo');
-        assert.isFalse(ch.canPutSync(1));
     });
 
     it('takeSync from an empty channel throws', () => {
@@ -283,7 +279,7 @@ describe('Channel', () => {
             cbCalled = true;
             assert.strictEqual(putManySpec, spec);
             ch._unselect(spec);
-            ch.putManySync(spec.values, true);
+            ch.putManySync(spec.values);
         };
         ch._select(putManySpec, cb);
         assert.isFalse(cbCalled);
@@ -293,4 +289,47 @@ describe('Channel', () => {
         assert.strictEqual(ch.takeSync(), 'foo');
         assert(cbCalled);
     });
+
+    it('Can specify a mapping transformation for channel', () => {
+       const xform = map((i: number) => i+1);
+       const ch = new Channel(1, xform);
+       ch.putSync(0);
+       assert.strictEqual(ch.takeSync(), 1);
+    });
+
+    it('Can specify a filtering transformation for channel', () => {
+        const xform = filter((i: number) => i % 2 === 0);
+        const ch = new Channel(10, xform);
+        ch.putManySync([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        for(let i = 0; i < 5; ++i) {
+            assert.strictEqual(ch.takeSync(), i * 2);
+        }
+    });
+
+    it('Can specify a short-circuiting transformation for channel', () => {
+        const xform = take(5);
+        const ch = new Channel(10, xform);
+        ch.putManySync([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        const result = ch.takeManySync(5);
+        assert.deepEqual(result, [0, 1, 2, 3, 4]);
+    });
+
+    it('A short-circuiting channel is implicitly closed', () => {
+        const xform = take(1);
+        const ch = new Channel(1, xform);
+        ch.putSync(1);
+        ch.putSync(2);
+        assert(ch.isClosed());
+        ch.putSync(3);
+        assert.strictEqual(ch.takeSync(), 1);
+        assert.strictEqual(ch.takeSync(), CLOSED);
+        ch.close();
+    });
+
+    it('Buffersize defaults to zero', ()=> {
+       const ch = new Channel();
+       const p = ch.put(1);
+       assert.isFalse(p.isFulfilled());
+    });
+
 });

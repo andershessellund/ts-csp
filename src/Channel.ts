@@ -22,12 +22,26 @@ import {
     makePromise
 } from './util';
 import FifoQueue from "./FifoQueue";
+import {isReduced} from "transducers-js";
+
+// The base transformer object to use with transducers
+const UnshiftTransform = {
+    '@@transducer/result': (queue: any) => queue,
+
+    '@@transducer/step': (queue: FifoQueue<any>, value: any) => {
+        queue.unshift(value);
+        return queue;
+    },
+};
 
 export class Channel implements BatchSource, BatchDestination, Source, Selectable {
 
-    constructor(private _bufferSize: number = 0) {}
+    constructor(private _bufferSize: number = 0, xform: any = null) {
+       this._xform = xform !== null ? xform(UnshiftTransform) : UnshiftTransform
+    }
 
     private _values = new FifoQueue<any>();
+    private _xform: any;
 
     private _puts: (PutCallback | null)[] = [];
     private _putCounts: number[] = [];
@@ -48,6 +62,7 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
     private _bufferRemaining: number = this._bufferSize;
 
     private _closed = false;
+    private _explicitlyClosed = false;
 
     _availableForSyncTake(): number {
         return this._bufferSize - this._bufferRemaining
@@ -194,7 +209,16 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
     }
 
     close(): void {
+        this._explicitlyClosed = true;
+        if(this._closed) {
+            return;
+        }
+        this._closeImplicitly();
+    }
+
+    _closeImplicitly(): void {
         this._closed = true;
+        this._xform['@@transducer/result'](this._values);
         this._apply();
     }
 
@@ -203,14 +227,25 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
     }
 
     _putMany(values: any[], resolver: PutCallback | null): void {
-        if (this._closed) {
+        if (this._explicitlyClosed) {
             throw new Error('Cannot put to closed channel');
         }
-        this._values.unshiftMany(values);
+        const valuesBefore = this._values.length();
+        let done;
+        for(let value of values) {
+            done = isReduced(this._xform['@@transducer/step'](this._values, value));
+            if(done) {
+                break;
+            }
+        }
+        const putCount = this._values.length() - valuesBefore;
         this._puts.push(resolver);
-        this._putCounts.push(values.length);
-        this._putCountSum += values.length;
+        this._putCounts.push(putCount);
+        this._putCountSum += putCount;
         this._apply();
+        if(done) {
+            this._closeImplicitly();
+        }
     }
 
     putMany(values: any[]): Promise<null> {
@@ -225,15 +260,12 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
         return promise;
     }
 
-    putManySync(values: any[], allowOverflow: boolean = false): void {
-        if (!allowOverflow && this._availableForSyncPut() < values.length) {
-            throw new Error('Immediate put would cause overflow');
-        }
+    putManySync(values: any[]): void {
         this._putMany(values, null);
     }
 
-    putSync(value: any, allowOverflow: boolean = false): void {
-        this.putManySync([value], allowOverflow);
+    putSync(value: any): void {
+        this.putManySync([value]);
     }
 
     _takeMany(count: number, resolver: TakeCallback): void {

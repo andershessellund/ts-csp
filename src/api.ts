@@ -10,7 +10,7 @@ export interface Source {
 
 export interface Destination {
     put(item: any): Promise<null>;
-    putSync<T>(item: any, allowOverflow?: boolean): void;
+    putSync<T>(item: any): void;
     canPutSync(count: number): boolean;
 }
 
@@ -21,7 +21,7 @@ export interface BatchSource extends Source {
 
 export interface BatchDestination extends Destination {
     putMany(items: any[]): Promise<null>;
-    putManySync(items: any[], allowOverflow?: boolean): void;
+    putManySync(items: any[]): void;
 }
 
 export enum OperationType {

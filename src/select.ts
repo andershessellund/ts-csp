@@ -57,7 +57,7 @@ export const select = function (selectSpec: Operation[]): Promise<SelectResult> 
             });
         }
         else if(spec.op === OperationType.PUT_MANY && spec.ch._canSelectPutSync(spec.values.length)) {
-            spec.ch.putManySync(spec.values, true);
+            spec.ch.putManySync(spec.values);
             return Promise.resolve({
                 ch: spec.ch
             });
@@ -84,14 +84,14 @@ export const select = function (selectSpec: Operation[]): Promise<SelectResult> 
             }
             else if (selectedSpec.op === OperationType.PUT) {
                 const {ch, value} = selectedSpec;
-                ch.putSync(value, true);
+                ch.putSync(value);
                 resolve({
                     ch
                 });
             }
             else {
                 const {ch, values} = selectedSpec;
-                ch.putManySync(values, true);
+                ch.putManySync(values);
                 resolve({
                     ch
                 });

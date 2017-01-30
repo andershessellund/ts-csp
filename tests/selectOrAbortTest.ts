@@ -37,7 +37,7 @@ describe('selectOrAbort', () => {
                 }
             });
             process.abort.raise('Aborted');
-            ch.putSync('foo', true);
+            ch.putSync('foo');
             yield process.completed.take();
             const error = process.failed.value();
             assert.instanceOf(error, Abort);
