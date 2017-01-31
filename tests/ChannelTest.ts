@@ -330,4 +330,12 @@ describe('Channel', () => {
        assert.isFalse(p.isFulfilled());
     });
 
+    it('Channel count number of puts', () => {
+        const ch = new Channel();
+        ch.put(1);
+        ch.putMany([2,3]);
+        ch.putSync(4);
+        ch.putManySync([5, 6]);
+        assert.strictEqual(ch.putCount(), 6);
+    });
 });

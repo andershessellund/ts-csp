@@ -63,6 +63,7 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
 
     private _closed = false;
     private _explicitlyClosed = false;
+    private _putCount = 0;
 
     _availableForSyncTake(): number {
         return this._bufferSize - this._bufferRemaining
@@ -226,10 +227,15 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
         return this._closed;
     }
 
+    putCount(): number {
+        return this._putCount;
+    }
+
     _putMany(values: any[], resolver: PutCallback | null): void {
         if (this._explicitlyClosed) {
             throw new Error('Cannot put to closed channel');
         }
+        this._putCount += values.length;
         const valuesBefore = this._values.length();
         let done;
         for(let value of values) {
