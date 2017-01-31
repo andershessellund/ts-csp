@@ -4,9 +4,7 @@ import {
     OperationType, PutOperation, TakeOperation, Operation, CLOSED,
     TakeManyOperation, PutManyOperation
 } from "../src/api";
-import {map} from "transducers-js";
-import {filter} from "transducers-js";
-import {take} from "transducers-js";
+import {map, filter, take} from "transducers-js";
 
 describe('Channel', () => {
     it('A channel is initially open', () => {

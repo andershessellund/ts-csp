@@ -1,11 +1,12 @@
 import { makePromise } from './util';
-import * as Promise from '@types/bluebird';
+import * as Promise from 'bluebird';
 
 import {
     SelectCallback,
     TakeOperation,
     TakeManyOperation, Selectable, Source, Operation, OperationType
 } from "./api";
+import {select} from "./select";
 
 export class Signal implements Selectable, Source {
     private _selectTakes: SelectCallback[] = [];
@@ -107,3 +108,30 @@ export class Signal implements Selectable, Source {
         throw new Error('Select PUT to Signal is not allowed');
     }
 }
+
+export const some = (...signals: Signal[]): Signal => {
+    const signal = new Signal();
+    const selectSpec = signals.map(signal => (<TakeOperation>{
+        ch: signal,
+        op: OperationType.TAKE
+    }));
+
+    select(selectSpec).then(
+        ({ ch, value }: { ch: Signal, value: any}) => signal.raise( value ),
+        err => {throw err}
+    );
+    return signal;
+};
+
+export const all = (...signals: Signal[]): Signal => {
+    const signal = new Signal();
+    Promise.all(signals.map(s => s.take())).then(
+        result => {
+            signal.raise(result)
+        },
+        err => {
+            throw err
+        }
+    );
+    return signal;
+};

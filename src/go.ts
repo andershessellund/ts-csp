@@ -26,6 +26,8 @@ export const go = (generator: Function): Process => {
         }
     };
     const errorHandler: (error: any) => void = error => {
+        console.log('errorHandler with error ');
+        console.dir(error);
         if(error instanceof Abort && !abortSignal.isRaised()) {
             error = new Error('Process aborted unexpectedly');
         }
