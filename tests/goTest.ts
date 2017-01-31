@@ -91,4 +91,13 @@ describe('go', () => {
             assert.strictEqual(error.message, 'Process aborted unexpectedly');
         })();
     });
+
+    it('If a process generator returns undefined, the process returns null', () => {
+        return Promise.coroutine(function*() {
+            const process = go(function*() {
+                yield Promise.resolve(null);
+            });
+            assert.isNull((yield process.succeeded.take()));
+        })();
+    });
 });

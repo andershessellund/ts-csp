@@ -110,17 +110,17 @@ export class Signal implements Selectable, Source {
 }
 
 export const some = (...signals: Signal[]): Signal => {
-    const signal = new Signal();
+    const result = new Signal();
     const selectSpec = signals.map(signal => (<TakeOperation>{
         ch: signal,
         op: OperationType.TAKE
     }));
 
     select(selectSpec).then(
-        ({ ch, value }: { ch: Signal, value: any}) => signal.raise( value ),
+        ({ ch, value }: { ch: Signal, value: any}) => result.raise( value ),
         err => {throw err}
     );
-    return signal;
+    return result;
 };
 
 export const all = (...signals: Signal[]): Signal => {

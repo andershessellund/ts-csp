@@ -21,8 +21,8 @@ export const go = (generator: Function): Process => {
             }
         }
         else {
-            succeeded.raise(result);
-            completed.raise({succeeded: result});
+            succeeded.raise(result || null);
+            completed.raise({succeeded: result || null});
         }
     };
     const errorHandler: (error: any) => void = error => {
