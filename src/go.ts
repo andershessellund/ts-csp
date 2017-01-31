@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 
-import {Process, ProcessResult, Abort} from "./api";
+import {Process, Abort} from "./api";
 import {Signal} from "./Signal";
 
 export const go = (generator: Function): Process => {
@@ -26,8 +26,6 @@ export const go = (generator: Function): Process => {
         }
     };
     const errorHandler: (error: any) => void = error => {
-        console.log('errorHandler with error ');
-        console.dir(error);
         if(error instanceof Abort && !abortSignal.isRaised()) {
             error = new Error('Process aborted unexpectedly');
         }
