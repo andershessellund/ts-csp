@@ -1,19 +1,17 @@
 {
   "name": "ts-csp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An ES6 implementation of CSP, with TypeScript defintions.",
-  "author": {
-    "name": "Anders Hessellund Jensen",
-    "email" : "anders@andershessellund.dk"
-  },
-  "keywords": ["CSP"],
-  "repository" :
-  {
-    "type" : "git",
-    "url" : "https://github.com/andershessellund/ts-csp.git"
+  "author": "",
+  "keywords": [
+    "CSP"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andershessellund/ts-csp.git"
   },
   "bugs": {
-    "url" : "https://github.com/andershessellund/ts-csp/issues"
+    "url": "https://github.com/andershessellund/ts-csp/issues"
   },
   "main": "lib/index.js",
   "scripts": {
@@ -48,7 +46,6 @@
   "files": [
     "lib/"
   ],
-  "author": "",
   "devDependencies": {
     "@types/chai": "^3.4.34",
     "@types/mocha": "^2.2.38",
