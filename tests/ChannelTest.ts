@@ -338,4 +338,18 @@ describe('Channel', () => {
         ch.putManySync([5, 6]);
         assert.strictEqual(ch.putCount(), 6);
     });
+
+    it('When select take many on a channel, select puts are applied even if not enough items is available to satisfy select', () => {
+       const ch = new Channel();
+       const putSpec: PutManyOperation = { ch, op: OperationType.PUT_MANY, values: [1, 2]};
+       let cbCalled = false;
+       ch._select(putSpec, (err: any, spec: PutManyOperation) => {
+           cbCalled = true;
+           ch._unselect(spec);{}
+       });
+       ch._select({ch, op: OperationType.TAKE_MANY, count: 5}, (err, spec) => {
+           ch._unselect(spec);
+       });
+       assert(cbCalled);
+    });
 });

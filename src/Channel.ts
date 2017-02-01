@@ -138,6 +138,10 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
         }
     }
 
+    _canForcePut(): boolean {
+        return this._puts.length > 0 || this._selectPuts.length > 0;
+    }
+
     /**
      * We will not accept a situation where we both have some waiting to take and some waiting to put.
      * In this case we will apply a take and allow an overflow of the buffer.
@@ -145,7 +149,7 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
      * @private
      */
     _forcePutCondition():boolean {
-        return (this._puts.length > 0 || this._selectPuts.length > 0) &&
+        return   this._canForcePut() &&
             (this._takes.length > 0 || this._selectTakes.length > 0);
     }
 
@@ -347,6 +351,9 @@ export class Channel implements BatchSource, BatchDestination, Source, Selectabl
     }
     _select(op: Operation, cb: SelectCallback): void {
         if(op.op === OperationType.TAKE || op.op === OperationType.TAKE_MANY) {
+            while(this._canForcePut()) {
+                this._forcePut();
+            }
             const amount = op.op === OperationType.TAKE ? 1 : op.count;
             this._selectTakes.push(cb);
             this._selectTakeOps.push(op);
