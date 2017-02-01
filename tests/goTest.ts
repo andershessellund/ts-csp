@@ -1,7 +1,7 @@
 import * as Promise from 'bluebird';
 import { assert } from 'chai';
 
-import { go } from '../src/go';
+import {go, delegateAbort} from '../src/go';
 import {Channel} from "../src/Channel";
 import {select} from "../src/select";
 import {OperationType, Abort} from "../src/api";
@@ -142,13 +142,13 @@ describe('go', () => {
         }).asPromise();
     });
 
-    it('Can specify an abort signal as option', () => {
+    it('Can delegate abort signal to process', () => {
         return go(function*() {
             const ch = new Channel();
             const abortSignal = new Signal();
-            const proc = go(function*(abortSignal: Signal) {
+            const proc = delegateAbort(abortSignal, go(function*(abortSignal: Signal) {
                 return yield takeOrAbort(abortSignal, ch);
-            }, {abortSignal});
+            }));
             abortSignal.raise('aborted');
             try {
                 yield proc;
@@ -159,4 +159,18 @@ describe('go', () => {
             }
         }).asPromise();
     });
+
+    it('When delegating abort signal, the signal is disconnected upon process completion', () => {
+        return go(function*() {
+            const abortSignal = new Signal();
+            const proc = delegateAbort(abortSignal, go(function*() {
+                return yield Promise.resolve(1);
+            }));
+            yield proc;
+            yield Promise.delay(0);
+            abortSignal.raise('aborted');
+            assert.isFalse(proc.abort.isRaised());
+        }).asPromise();
+    });
+
 });

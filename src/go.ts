@@ -17,17 +17,7 @@ class ProcessImpl implements Process {
     abort = new Signal();
     private _promise: Promise<any>;
 
-    constructor(private generator: Function, options?: ProcessOptions ) {
-        options = options || {};
-        const abortSignal = options.abortSignal;
-        if(abortSignal) {
-            abortSignal.connect(this.abort);
-            // remove connection to prevent memory leaks upon process completion
-            this.completed.take().then(() =>
-                abortSignal.disconnect(this.abort)
-            );
-        }
-    }
+    constructor(private generator: Function) {}
 
     _succeed(value: any) {
         this.completed.raise({succeeded: value});
@@ -67,8 +57,16 @@ class ProcessImpl implements Process {
 
 }
 
-export const go = (generator: Function, options?: ProcessOptions): Process => {
-    const p = new ProcessImpl(generator, options);
+export const go = (generator: Function): Process => {
+    const p = new ProcessImpl(generator);
     p._run();
     return p;
+};
+
+export const delegateAbort = (abortSignal: Signal, process: Process) => {
+    abortSignal.connect(process.abort);
+    // remove connection to prevent memory leaks upon process completion
+    process.completed.take().then(() =>
+        abortSignal.disconnect(process.abort));
+    return process;
 };
