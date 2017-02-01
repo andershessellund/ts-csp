@@ -142,4 +142,21 @@ describe('go', () => {
         }).asPromise();
     });
 
+    it('Can specify an abort signal as option', () => {
+        return go(function*() {
+            const ch = new Channel();
+            const abortSignal = new Signal();
+            const proc = go(function*(abortSignal: Signal) {
+                return yield takeOrAbort(abortSignal, ch);
+            }, {abortSignal});
+            abortSignal.raise('aborted');
+            try {
+                yield proc;
+                assert.fail('Should have thrown');
+            }
+            catch (err) {
+                assert.instanceOf(err, Abort);
+            }
+        }).asPromise();
+    });
 });

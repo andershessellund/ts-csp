@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 
-import {Process, Abort} from "./api";
+import {Process, Abort, ProcessOptions} from "./api";
 import {Signal} from "./Signal";
 
 const processYieldHandler = (value: any) => {
@@ -17,8 +17,16 @@ class ProcessImpl implements Process {
     abort = new Signal();
     private _promise: Promise<any>;
 
-    constructor(private generator: Function) {
-
+    constructor(private generator: Function, options?: ProcessOptions ) {
+        options = options || {};
+        const abortSignal = options.abortSignal;
+        if(abortSignal) {
+            abortSignal.connect(this.abort);
+            // remove connection to prevent memory leaks upon process completion
+            this.completed.take().then(() =>
+                abortSignal.disconnect(this.abort)
+            );
+        }
     }
 
     _succeed(value: any) {
@@ -59,8 +67,8 @@ class ProcessImpl implements Process {
 
 }
 
-export const go = (generator: Function): Process => {
-    const p = new ProcessImpl(generator);
+export const go = (generator: Function, options?: ProcessOptions): Process => {
+    const p = new ProcessImpl(generator, options);
     p._run();
     return p;
 };

@@ -19,9 +19,10 @@ describe('Signal', () => {
         assert.throws(() => s.value());
     });
 
-    it('Throws when raising with a value of undefined', () => {
+    it('Raising undefined value raises null instead', () => {
         const s = new Signal();
-        assert.throws(() => s.raise(undefined));
+        s.raise();
+        assert.isNull(s.value());
     });
 
     it('A signal can be raised and the value retrieved', () => {
@@ -161,5 +162,14 @@ describe('Signal', () => {
         s.raise('foo');
         s.connect(s1);
         assert(s1.isRaised());
+    });
+
+    it('I can disconnect a signal', () => {
+       const s = new Signal();
+       const s2 = new Signal();
+       s.connect(s2);
+       s.disconnect(s2);
+       s.raise(null);
+       assert.isFalse(s2.isRaised());
     });
 });

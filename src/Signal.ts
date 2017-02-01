@@ -41,10 +41,7 @@ export class Signal implements Selectable, Source {
         return false;
     }
 
-    raise(value: any) {
-        if(typeof value === 'undefined') {
-            throw new Error('Cannot raise a signal with an undefined value');
-        }
+    raise(value: any = null) {
         this._value = value;
         this._resolve(value);
         while (this._selectTakes.length > 0) {
@@ -82,6 +79,13 @@ export class Signal implements Selectable, Source {
         }
         else {
             this._connected.push(signal);
+        }
+    }
+
+    disconnect(signal: Signal) {
+        const index = this._connected.indexOf(signal);
+        if(index !== -1) {
+            this._connected.splice(index, 1);
         }
     }
 

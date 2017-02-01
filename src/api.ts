@@ -103,7 +103,9 @@ export class Abort  {
     constructor(public reason: string | null) {}
 }
 
-
+export interface ProcessOptions {
+    abortSignal?: Signal
+}
 
 export type SelectResult = SelectTakeResult | SelectTakeManyResult | SelectPutResult | SelectPutManyResult;
 
