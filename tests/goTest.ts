@@ -1,14 +1,19 @@
 import * as Promise from 'bluebird';
 import { assert } from 'chai';
 
-import {go, delegateAbort} from '../src/go';
+import {go} from '../src/go';
 import {Channel} from "../src/Channel";
 import {select} from "../src/select";
-import {OperationType, Abort} from "../src/api";
+import {OperationType, Abort, Process} from "../src/api";
 import {Signal} from "../src/Signal";
-import {takeOrAbort} from "../src/takeOrAbort";
 
 describe('go', () => {
+    it('The abortSignal is present on this', () => {
+       return go(function*() {
+           assert.instanceOf(this.abortSignal, Signal);
+           yield Promise.resolve(1);
+       }).asPromise();
+    });
     it('May run a successful process and return a value', () => {
         return Promise.coroutine(function*(): any {
             const ch = new Channel(0);
@@ -28,13 +33,13 @@ describe('go', () => {
     it('A process may abort by returning Abort if the abort signal is raised', () => {
         return Promise.coroutine(function*(): any {
             const ch = new Channel(0);
-            const process = go(function*(abortSignal: Signal) {
+            const process = go(function*() {
                 const {ch: selectedChannel} = yield select([
                     {ch, op: OperationType.TAKE},
-                    {ch: abortSignal, op: OperationType.TAKE }
+                    {ch: this.abortSignal, op: OperationType.TAKE }
                 ]);
-                if(selectedChannel === abortSignal) {
-                    return new Abort(abortSignal.value());
+                if(selectedChannel === this.abortSignal) {
+                    return new Abort(this.abortSignal.value());
                 }
                 else {
                     throw new Error();
@@ -55,8 +60,8 @@ describe('go', () => {
 
     it('A process may abort by throwing Abort if the abort signal is raised', () => {
         return Promise.coroutine(function*(): any {
-            const process = go(function*(abortSignal: Signal) {
-                const reason = yield abortSignal.take();
+            const process = go(function*() {
+                const reason = yield this.abortSignal.take();
                 throw new Abort(reason);
             });
             assert.isFalse(process.completed.isRaised());
@@ -114,10 +119,10 @@ describe('go', () => {
     it('Yielding a aborting process throws an abort', () => {
         return go(function*() {
             const ch = new Channel();
-            const proc =  go(function*(abortSignal: Signal) {
-                return yield takeOrAbort(abortSignal, ch);
+            const proc =  go(function*() {
+                return yield this.takeOrAbort(ch);
             });
-            proc.abort.raise('aborted');;
+            proc.abort.raise('aborted');
             try {
                 yield proc;
                 assert.fail('Should have thrown');
@@ -142,28 +147,81 @@ describe('go', () => {
         }).asPromise();
     });
 
+    it('If abort is not raised, the select will work as usual', () => {
+        return Promise.coroutine(function*() {
+            const ch = new Channel(0);
+            const process = go(function*() {
+                const selectResult = yield this.selectOrAbort([
+                    { ch, op: OperationType.TAKE}
+                ]);
+                if(selectResult.ch === ch) {
+                    return selectResult.value;
+                }
+            });
+            ch.putSync('foo');
+            yield process.completed.take();
+            assert.strictEqual(process.succeeded.value(), 'foo');
+        })();
+    });
+
+
+    it('If abortSignal is raised, Abort will be thrown wil appropriate reason', () => {
+        return Promise.coroutine(function*() {
+            const ch = new Channel(0);
+            const process = go(function*() {
+                const selectResult = yield this.selectOrAbort([
+                    { ch, op: OperationType.TAKE}
+                ]);
+                if(selectResult.ch === ch) {
+                    return selectResult.value;
+                }
+            });
+            process.abort.raise('Aborted');
+            ch.putSync('foo');
+            yield process.completed.take();
+            const error = process.failed.value();
+            assert.instanceOf(error, Abort);
+            assert.strictEqual(error.reason, 'Aborted');
+        })();
+    });
+
+
     it('Can delegate abort signal to process', () => {
         return go(function*() {
-            const ch = new Channel();
-            const abortSignal = new Signal();
-            const proc = delegateAbort(abortSignal, go(function*(abortSignal: Signal) {
-                return yield takeOrAbort(abortSignal, ch);
-            }));
-            abortSignal.raise('aborted');
+            let childProc: Process | undefined = undefined;
+            const abortedProc = go(function*() {
+                const ch = new Channel();
+                childProc = this.delegateAbort(go(function*() {
+                    return yield this.takeOrAbort(ch);
+                }));
+                try {
+                    yield childProc;
+                    assert.fail('Should have thrown');
+                }
+                catch (err) {
+                    assert.instanceOf(err, Abort);
+                    throw err;
+                }
+            });
+            abortedProc.abort.raise('aborted');
             try {
-                yield proc;
+                yield abortedProc;
                 assert.fail('Should have thrown');
             }
-            catch (err) {
+            catch(err) {
                 assert.instanceOf(err, Abort);
+                assert.strictEqual(err.reason, 'aborted');
             }
+            const completedChildProc: Process = <any>childProc;
+            assert.instanceOf(completedChildProc.failed.value(), Abort);
+            assert.strictEqual(completedChildProc.failed.value().reason, 'aborted');
         }).asPromise();
     });
 
     it('When delegating abort signal, the signal is disconnected upon process completion', () => {
         return go(function*() {
             const abortSignal = new Signal();
-            const proc = delegateAbort(abortSignal, go(function*() {
+            const proc = this.delegateAbort(go(function*() {
                 return yield Promise.resolve(1);
             }));
             yield proc;

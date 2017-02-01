@@ -10,7 +10,7 @@ import {select} from "./select";
  *   from the child processes.
  */
 export const parallel = (...processes: Process[]) => {
-        return go(function*(abortSignal: Signal) {
+        return go(function*() {
             const childErrorSignal = some(...processes.map(process => process.failed));
             const allsucceededSignal = all(...processes.map(process => process.succeeded));
             const abortChildren = (reason: any) => {
@@ -21,17 +21,17 @@ export const parallel = (...processes: Process[]) => {
             const { ch: signal, value } = yield select([
                 { ch: childErrorSignal, op: OperationType.TAKE },
                 { ch: allsucceededSignal, op: OperationType.TAKE },
-                { ch: abortSignal, op: OperationType.TAKE }
+                { ch: this.abortSignal, op: OperationType.TAKE }
             ]);
-            if(signal === childErrorSignal || signal === abortSignal) {
-                if(signal === abortSignal) {
+            if(signal === childErrorSignal || signal === this.abortSignal) {
+                if(signal === this.abortSignal) {
                     abortChildren(value);
                 }
                 else {
                     abortChildren(value.toString());
                 }
                 yield all(...processes.map(process => process.completed)).take();
-                if(signal === abortSignal) {
+                if(signal === this.abortSignal) {
                     return new Abort(value);
                 }
                 else {

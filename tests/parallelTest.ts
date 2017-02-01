@@ -4,7 +4,6 @@ import * as Promise from 'bluebird';
 import {go} from "../src/go";
 import {parallel} from "../src/parallel";
 import {Signal} from "../src/Signal";
-import {takeOrAbort} from "../src/takeOrAbort";
 import {Channel} from "../src/Channel";
 import {Abort} from "../src/api";
 
@@ -27,11 +26,11 @@ describe('parallel', () => {
     it('Will abort child processes if parent process is aborted', () => {
         return Promise.coroutine(function*() {
             const ch = new Channel();
-            const p1 = go(function*(abortSignal: Signal) {
-                return yield takeOrAbort(abortSignal, ch);
+            const p1 = go(function*() {
+                return yield this.takeOrAbort(ch);
             });
-            const p2 = go(function*(abortSignal: Signal) {
-                return yield takeOrAbort(abortSignal, ch);
+            const p2 = go(function*() {
+                return yield this.takeOrAbort(ch);
             });
 
             const p = parallel(p1, p2);
@@ -50,8 +49,8 @@ describe('parallel', () => {
         return Promise.coroutine(function*() {
             const error = new Error('foo');
             const ch = new Channel();
-            const p1 = go(function*(abortSignal: Signal) {
-                return yield takeOrAbort(abortSignal, ch);
+            const p1 = go(function*() {
+                return yield this.takeOrAbort(ch);
             });
             const p2 = go(function*() {
                 yield Promise.reject(error);
