@@ -6,6 +6,7 @@ import {Channel} from "../src/Channel";
 import {select} from "../src/select";
 import {OperationType, Abort} from "../src/api";
 import {Signal} from "../src/Signal";
+import {takeOrAbort} from "../src/takeOrAbort";
 
 describe('go', () => {
     it('May run a successful process and return a value', () => {
@@ -100,4 +101,45 @@ describe('go', () => {
             assert.isNull((yield process.succeeded.take()));
         })();
     });
+
+    it('Yielding a succeeding process gives the return value of the process', () => {
+        return go(function*() {
+            const value =  yield go(function*() {
+               return yield Promise.resolve('foo');
+            });
+            assert.strictEqual(value, 'foo');
+        }).asPromise();
+    });
+
+    it('Yielding a aborting process throws an abort', () => {
+        return go(function*() {
+            const ch = new Channel();
+            const proc =  go(function*(abortSignal: Signal) {
+                return yield takeOrAbort(abortSignal, ch);
+            });
+            proc.abort.raise('aborted');;
+            try {
+                yield proc;
+                assert.fail('Should have thrown');
+            }
+            catch(err) {
+                assert.instanceOf(err, Abort);
+            }
+        }).asPromise();
+    });
+
+    it('Yielding an erroring process throws the error', () => {
+        return go(function*() {
+            try {
+                yield go(function*() {
+                    return yield Promise.reject('foo');
+                });
+                assert.fail('Should have thrown');
+            }
+            catch(err) {
+                assert.strictEqual(err, 'foo');
+            }
+        }).asPromise();
+    });
+
 });

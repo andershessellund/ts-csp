@@ -3,38 +3,64 @@ import * as Promise from 'bluebird';
 import {Process, Abort} from "./api";
 import {Signal} from "./Signal";
 
+const processYieldHandler = (value: any) => {
+    if (value instanceof ProcessImpl) {
+        return value.asPromise();
+    }
+    return value;
+};
+
+class ProcessImpl implements Process {
+    completed = new Signal();
+    succeeded = new Signal();
+    failed = new Signal();
+    abort = new Signal();
+    private _promise: Promise<any>;
+
+    constructor(private generator: Function) {
+
+    }
+
+    _succeed(value: any) {
+        this.completed.raise({succeeded: value});
+        this.succeeded.raise(value);
+    }
+
+    _fail(error: any) {
+        this.failed.raise(error);
+        this.completed.raise({failed: error});
+    }
+
+    _run() {
+        const successHandler = this._succeed.bind(this);
+        const errorHandler = this._fail.bind(this);
+        this._promise = (Promise.coroutine as any)(this.generator, {yieldHandler: processYieldHandler})(this.abort)
+            .then((value: any) => {
+                if (typeof value === 'undefined') {
+                    value = null;
+                }
+                if (value instanceof Abort || value instanceof Error) {
+                    throw value;
+                }
+                return value;
+            })
+            .catch((error: any) => {
+                if (error instanceof Abort && !this.abort.isRaised()) {
+                    error = new Error('Process aborted unexpectedly');
+                }
+                throw error;
+            });
+        this._promise.then(successHandler, errorHandler);
+    }
+
+    asPromise(): Promise<any> {
+        return this._promise;
+    }
+
+}
+
 export const go = (generator: Function): Process => {
-    const completed = new Signal();
-    const succeeded = new Signal();
-    const failed = new Signal();
-    const abortSignal = new Signal();
-    const successHandler: (result: any) => void = result => {
-        if(result instanceof Abort) {
-            if(abortSignal.isRaised()) {
-                failed.raise(result);
-                completed.raise({failed: result});
-            }
-            else {
-                const error = new Error('Process aborted unexpectedly');
-                failed.raise(error);
-                completed.raise({failed: error});
-            }
-        }
-        else {
-            succeeded.raise(result || null);
-            completed.raise({succeeded: result || null});
-        }
-    };
-    const errorHandler: (error: any) => void = error => {
-        if(error instanceof Abort && !abortSignal.isRaised()) {
-            error = new Error('Process aborted unexpectedly');
-        }
-        failed.raise(error);
-        completed.raise({failed: error});
-    };
-    const process: Process = {
-        succeeded, completed, failed, abort: abortSignal
-    };
-    Promise.coroutine(generator)(abortSignal).then(successHandler, errorHandler);
-    return process;
+    const p = new ProcessImpl(generator);
+    p._run();
+    return p;
 };

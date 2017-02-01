@@ -95,7 +95,8 @@ export interface Process {
     succeeded: Signal,
     failed: Signal,
     completed: Signal,
-    abort: Signal
+    abort: Signal,
+    asPromise: () => Promise<any>
 }
 
 export class Abort  {
