@@ -1,6 +1,6 @@
 {
   "name": "ts-csp",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "An ES6 implementation of CSP, with TypeScript definitions.",
   "author": "",
   "keywords": [
