@@ -63,4 +63,12 @@ describe('parallel', () => {
             assert.instanceOf(p1.failed.value(), Abort);
         })();
     });
+
+    it('Will throw if called with an empty array of processes', () => {
+       assert.throws(() => parallel());
+    });
+
+    it('Will throw if called with something that is not a process', () => {
+       assert.throws(() => parallel(<any>{succeeded: true}));
+    });
 });
