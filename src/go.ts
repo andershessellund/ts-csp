@@ -7,13 +7,6 @@ import {
 import {Signal} from "./Signal";
 import {select} from "./select";
 
-const processYieldHandler = (value: any) => {
-    if (value instanceof ProcessImpl) {
-        return value.asPromise();
-    }
-    return value;
-};
-
 class ProcessRunner {
 
     delegateAbort(process: Process): Process {
@@ -49,8 +42,7 @@ class ProcessRunner {
 
     constructor(generator: Function, public abortSignal: Signal) {
         this._coroutine = (Promise.coroutine as any)(
-            generator,
-            {yieldHandler: processYieldHandler});
+            generator);
     }
 
     private _coroutine: any;
@@ -81,6 +73,7 @@ class ProcessImpl implements Process {
     succeeded = new Signal();
     failed = new Signal();
     abort = new Signal();
+    then: (successHandler: (success: any) => any, errorHandler: (error: any) => any) => Promise<any>;
     private _promise: Promise<any>;
     private _runner: ProcessRunner;
     constructor(generator: Function) {
@@ -101,6 +94,7 @@ class ProcessImpl implements Process {
         const successHandler = this._succeed.bind(this);
         const errorHandler = this._fail.bind(this);
         this._promise = this._runner._run();
+        this.then = this._promise.then.bind(this._promise);
         this._promise.then(successHandler, errorHandler);
     }
 
