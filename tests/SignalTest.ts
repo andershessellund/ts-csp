@@ -172,4 +172,9 @@ describe('Signal', () => {
        s.raise(null);
        assert.isFalse(s2.isRaised());
     });
+
+    it('Thows if attempting to connect something that is not a signal', () => {
+        const s = new Signal();
+        assert.throws(() => s.connect({} as any));
+    })
 });

@@ -74,6 +74,9 @@ export class Signal implements Selectable, Source {
     }
 
     connect(signal: Signal) {
+        if(typeof signal.raise !== 'function') {
+            throw new Error('Signal.connect: argument must be a signal');
+        }
         if (this.isRaised()) {
             signal.raise(this.takeSync());
         }
