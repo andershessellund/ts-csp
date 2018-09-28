@@ -74,30 +74,6 @@ describe('go', () => {
         })();
     });
 
-    it('If a process aborts by returning Abort without the abort signal being raised, it is an error', () => {
-        return Promise.coroutine(function*() {
-            const process = go(function*() {
-                yield Promise.resolve(null);
-                return new Abort('aborted for no reason');
-            });
-            const error = yield process.failed.take();
-            assert.notInstanceOf(error, Abort);
-            assert.strictEqual(error.message, 'Process aborted unexpectedly');
-        })();
-    });
-
-    it('If a process aborts by throwing Abort without the abort signal being raised, it is an error', () => {
-        return Promise.coroutine(function*() {
-            const process = go(function*() {
-                yield Promise.resolve(null);
-                throw new Abort('aborted for no reason');
-            });
-            const error = yield process.failed.take();
-            assert.notInstanceOf(error, Abort);
-            assert.strictEqual(error.message, 'Process aborted unexpectedly');
-        })();
-    });
-
     it('If a process generator returns undefined, the process returns null', () => {
         return Promise.coroutine(function*() {
             const process = go(function*() {

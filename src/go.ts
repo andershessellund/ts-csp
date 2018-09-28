@@ -60,7 +60,7 @@ class ProcessRunner {
             })
             .catch((error: any) => {
                 if (error instanceof Abort && !this.abortSignal.isRaised()) {
-                    error = new Error('Process aborted unexpectedly');
+                    this.abortSignal.raise(error.reason);
                 }
                 throw error;
             });
