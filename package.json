@@ -51,10 +51,10 @@
     "@types/mocha": "^2.2.38",
     "@types/node": "^7.0.4",
     "chai": "^3.5.0",
-    "coveralls": "^2.11.15",
-    "mocha": "^3.2.0",
+    "coveralls": "^3.0.2",
+    "mocha": "^5.2.0",
     "mocha-clean": "^1.0.0",
-    "nyc": "^10.1.2",
+    "nyc": "^13.1.0",
     "ts-node": "^2.0.0",
     "typescript": "^2.1.5"
   },
